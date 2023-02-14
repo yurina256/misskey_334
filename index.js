@@ -1,17 +1,17 @@
 //-------定数--------------------------------
 const https = require("https");
+require('dotenv').config();
 const TOKEN = process.env.misskey_token; //todo:直書きをやめる
 const HOST = process.env.misskey_host;
-function key_check();
+key_check();
 console.log(`token:${process.env.misskey_token}`);
 const LTL_ENDPOINT = `wss://${HOST}/streaming?i=${TOKEN}`;
 const POST_ENDPOINT = `https://${HOST}/api/notes/create`;
 const WebSocketClient = require('websocket').client;
 const client = new WebSocketClient();
-const readtime = 120 * 1000 //起動からのノート収集の限界(ミリ秒)
+const readtime = 10 * 1000 //起動からのノート収集の限界(ミリ秒)
 const today = new Date();
-const targettime = new Date(today.getFullYear(),today.getMonth(),today.getDate(),3,34,0,0); //目標タイム 0ミリ以外は判定でバグる
-require('dotenv').config();
+const targettime = new Date(today.getFullYear(),today.getMonth(),today.getDate(),2,53,0,0); //目標タイム 0ミリ以外は判定でバグる
 console.log(`targettime:${targettime.toString()}`);
 
     //システムメッセージ
