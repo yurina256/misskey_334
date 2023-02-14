@@ -2,6 +2,7 @@
 const https = require("https");
 const TOKEN = process.env.misskey_token; //todo:直書きをやめる
 const HOST = process.env.misskey_host;
+function key_check();
 console.log(`token:${process.env.misskey_token}`);
 const LTL_ENDPOINT = `wss://${HOST}/streaming?i=${TOKEN}`;
 const POST_ENDPOINT = `https://${HOST}/api/notes/create`;
@@ -10,6 +11,7 @@ const client = new WebSocketClient();
 const readtime = 120 * 1000 //起動からのノート収集の限界(ミリ秒)
 const today = new Date();
 const targettime = new Date(today.getFullYear(),today.getMonth(),today.getDate(),3,34,0,0); //目標タイム 0ミリ以外は判定でバグる
+require('dotenv').config();
 console.log(`targettime:${targettime.toString()}`);
 
     //システムメッセージ
@@ -32,6 +34,19 @@ console.log(`targettime:${targettime.toString()}`);
         var record = [];
         //参加ユーザID(重複除去処理用)
         var participant = {};
+//環境変数(or .envファイル)が読み込まれているかチェック
+function key_check(){
+ if(typeof TOKEN == "undefined"){
+    var err_flg = false;
+    console.log("TOKENがセットされていないようです!");
+    err_flg = true;
+ }
+ if(typeof HOST == "undefined"){
+    console.log("HOSTがセットされていないようです!");
+    err_flg = true;
+ }
+ if(err_flg) process.exit(1);
+}
 
 //--------エラーハンドリング(雑)--------------
 
