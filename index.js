@@ -1,13 +1,15 @@
 //-------定数--------------------------------
 const https = require("https");
-const TOKEN = process.env.misskey_token //todo:直書きをやめる
-const LTL_ENDPOINT = `wss://misskey.io/streaming?i=${TOKEN}`;
-const POST_ENDPOINT = "https://misskey.io/api/notes/create";
+const TOKEN = process.env.misskey_token; //todo:直書きをやめる
+const HOST = process.env.misskey_host;
+console.log(`token:${process.env.misskey_token}`);
+const LTL_ENDPOINT = `wss://${HOST}/streaming?i=${TOKEN}`;
+const POST_ENDPOINT = `https://${HOST}/api/notes/create`;
 const WebSocketClient = require('websocket').client;
 const client = new WebSocketClient();
-const readtime = 30 * 1000 //起動からのノート収集の限界(ミリ秒)
+const readtime = 120 * 1000 //起動からのノート収集の限界(ミリ秒)
 const today = new Date();
-const targettime = new Date(today.getFullYear(),today.getMonth(),today.getDate(),1,56,0,0); //目標タイム 0ミリ以外は判定でバグる
+const targettime = new Date(today.getFullYear(),today.getMonth(),today.getDate(),3,34,0,0); //目標タイム 0ミリ以外は判定でバグる
 console.log(`targettime:${targettime.toString()}`);
 
     //システムメッセージ
@@ -41,7 +43,24 @@ client.on('connectFailed', function(error) {
     console.log('えらー: ' + error.toString());
 });
 
+//--------起動時投稿---------------------------
+function start_up(){
+    const options = {
+        method:"POST",
+        headers:{
+            "Content-Type": "application/json"
+        }
+    }
+    const request = https.request(POST_ENDPOINT, options, response => {
+        console.log(`statusCode: ${response.statusCode}`)
+      });
+
+    request.write(JSON.stringify({i:TOKEN,text:`334観測中(${today.toLocaleDateString()})`}));
+    request.end();
+}
+start_up();
 //---------本体(収集)------------------------------
+
 
     //接続
     client.on('connect', function(connection){
@@ -55,6 +74,7 @@ client.on('connectFailed', function(error) {
             const note = JSON.parse(message.utf8Data).body.body;
             //console.log(note);
             if(is_target(note) && !participant[note.userId]){
+                console.log(`valid:${note.user.username}`);
                 var time = new Date(note.createdAt);
                 const record_obj = {
                     id:note.id,
@@ -71,7 +91,8 @@ client.on('connectFailed', function(error) {
         connection.on('error', function(error) {
             console.log("Connection Error: " + error.toString());
         });
-    
+        
+        //規定の秒数集計したら、切断して集計処理に入る
         function close_connection(){
             connection.close();
             totalization();
@@ -82,9 +103,8 @@ client.on('connectFailed', function(error) {
 
     //収集対象ノートかの判定
     function is_target(note){
-        //あとでかく
         if(note.text == null) return false;
-        if(note.text.match(/334/)){
+        if(note.text.match(/(33-?4|:hanshin:)/)){
             return true;
         }
         return false;
@@ -94,36 +114,39 @@ client.on('connectFailed', function(error) {
 function totalization(){
     //DQと+1分以上の排除をしてソート
     var record_without_DQ = [];
+    var record_DQ = [];//フライングを保存する　今のところは特に読まない
     record.forEach((obj) => {
-        console.log(obj.time.getTime(),targettime.getTime());
-        if(obj.time.getTime() >= targettime.getTime() && obj.time.getTime() < targettime.getTime() + (60 * 1000)){
-            record_without_DQ.push(obj)
+        //console.log(obj.time.getTime(),targettime.getTime());
+        if(obj.time.getTime() < targettime.getTime()){
+            record_DQ.push(obj);
+        }else if(obj.time.getTime() < targettime.getTime() + (60 * 1000)){
+            record_without_DQ.push(obj);
         }
     });
-    record_without_DQ.sort((a,b) => {return a.time.getTime() > b.time.getTime()});
+    record_without_DQ.sort((a,b) => {return a.time.getTime() - b.time.getTime()});
+    console.log(`有効投稿数:${record_without_DQ.length}`);
+    console.log(`フライング投稿数:${record_DQ.length}`);
     post(record_without_DQ);
 }
 
 //----------本体(投稿)-------------------------------
 function post(record){
     //---------投稿文面作成-------------------------------
-    console.log(record);
-    console.log(`有効記録数:${record.length}`)
     if(record.length==0) return 0;
 
-    var post_text = `Todays Top ${Math.min(10,record.length)}\n`;
+    var post_text = `Todays Top ${Math.min(10,record.length)}\n\n`;
     var emozi = [
     "",
-    ":1st_place_medal:",
-    ":2nd_place_medal:",
-    ":3rd_place_medal:",
-    ":four:",
-    ":five:",
-    ":six:",
-    ":seven:",
-    ":eight:",
-    ":nine:",
-    ":ten:"
+    "🥇",
+    "🥈",
+    "🥉",
+    "4⃣",
+    "5⃣",
+    "6⃣",
+    "7⃣",
+    "8⃣",
+    "9⃣",
+    "🔟"
     ];
     for(var i=1;i<=Math.min(10,record.length);i++){
         const seconds = record[i-1].time.getSeconds();
@@ -151,7 +174,6 @@ function post(record){
         console.log(`statusCode: ${response.statusCode}`)
       });
 
-    request.write(JSON.stringify({i:TOKEN,text:"うにょーん"}));
+    request.write(JSON.stringify({i:TOKEN,text:post_text}));
     request.end();
-
 }

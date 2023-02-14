@@ -1,0 +1,11 @@
+{
+    "configurations": [
+        {
+            "type": "node-terminal",
+            "name": "スクリプトの実行: test",
+            "request": "launch",
+            "command": "node index.js",
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
