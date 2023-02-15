@@ -2,5 +2,9 @@
   "dependencies": {
     "dotenv": "^16.0.3",
     "websocket": "^1.0.34"
+  },
+  "main":"index.js",
+  "scripts": {
+    "start":"node index.js"
   }
 }
